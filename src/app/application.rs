@@ -1,4 +1,4 @@
-use super::super::cli::args::parse_args;
+use super::cli::parse_args;
 use super::aws::get_eks_token;
 use anyhow::Result;
 use tokio::io::AsyncWriteExt;
