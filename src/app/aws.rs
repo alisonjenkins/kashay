@@ -1,8 +1,8 @@
-use anyhow::{Result, Context};
-use aws_sig_auth::signer::{self, OperationSigningConfig, HttpSignatureType, RequestConfig};
+use anyhow::{Context, Result};
+use aws_sig_auth::signer::{self, HttpSignatureType, OperationSigningConfig, RequestConfig};
 use aws_smithy_http::body::SdkBody;
 use aws_types::region::{Region, SigningRegion};
-use aws_types::{SigningService, credentials::ProvideCredentials};
+use aws_types::{credentials::ProvideCredentials, SigningService};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -36,7 +36,9 @@ async fn get_cached_token(cluster_name: &str, region: &str) -> Result<String> {
     };
 
     // Use serde to deserialize the JSON
-    match serde_json::from_str::<K8sToken>(&token_json).context("Failed to parse JSON encoded cached token") {
+    match serde_json::from_str::<K8sToken>(&token_json)
+        .context("Failed to parse JSON encoded cached token")
+    {
         Ok(token) => {
             let expiration = token.status.expiration_timestamp;
             let expiration_time = chrono::DateTime::parse_from_rfc3339(&expiration)?;
@@ -46,12 +48,10 @@ async fn get_cached_token(cluster_name: &str, region: &str) -> Result<String> {
             } else {
                 let token_json = create_eks_token(cluster_name, region).await?;
                 cache_token(cluster_name, &token_json).await?;
-                return Ok(token_json)
+                return Ok(token_json);
             }
-        },
-        Err(e) => {
-            Err(anyhow::anyhow!("Error deserializing token: {}", e))
-        },
+        }
+        Err(e) => Err(anyhow::anyhow!("Error deserializing token: {}", e)),
     }
 }
 
@@ -68,11 +68,15 @@ async fn create_eks_token(cluster_name: &str, region: &str) -> Result<String> {
     // Convert region to AWS region
     let region = region.to_owned();
     let region = Region::new(region);
-    
+
     // Get credentials
     let config = aws_config::load_from_env().await;
-    let credentials = config.credentials_provider().unwrap().provide_credentials().await?;
-    
+    let credentials = config
+        .credentials_provider()
+        .unwrap()
+        .provide_credentials()
+        .await?;
+
     // Setup signer
     let signer = signer::SigV4Signer::new();
     let mut operation_config = OperationSigningConfig::default_config();
@@ -89,7 +93,10 @@ async fn create_eks_token(cluster_name: &str, region: &str) -> Result<String> {
 
     // Create the request
     let mut request = http::Request::builder()
-        .uri(format!("https://sts.{}.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15", &region))
+        .uri(format!(
+            "https://sts.{}.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15",
+            &region
+        ))
         .header("x-k8s-aws-id", cluster_name)
         .body(SdkBody::empty())
         .expect("valid request");
@@ -107,6 +114,7 @@ async fn create_eks_token(cluster_name: &str, region: &str) -> Result<String> {
     let uri = "k8s-aws-v1.".to_owned() + &uri;
     let request_ts = request_ts.to_rfc3339();
 
+    // Generate output JSON
     let token = K8sToken {
         kind: "ExecCredential".to_owned(),
         api_version: "client.authentication.k8s.io/v1".to_owned(),
@@ -122,15 +130,19 @@ async fn create_eks_token(cluster_name: &str, region: &str) -> Result<String> {
     Ok(token)
 }
 
-pub async fn get_eks_token(cluster_name: &str, region: &str) -> Result<String> {
-    match get_cached_token(cluster_name, region).await {
-        Ok(cached_token) => {
-            Ok(cached_token)
-        }
-        Err(_) => {
-            let creds = create_eks_token(cluster_name, region).await?;
-            cache_token(cluster_name, &creds).await?;
-            return Ok(creds.to_string())
+pub async fn get_eks_token(cluster_name: &str, region: &str, skip_cache: &bool) -> Result<String> {
+    if skip_cache.to_owned() {
+        let token = create_eks_token(cluster_name, region).await?;
+        cache_token(cluster_name, &token).await?;
+        Ok(token)
+    } else {
+        match get_cached_token(cluster_name, region).await {
+            Ok(cached_token) => Ok(cached_token),
+            Err(_) => {
+                let token = create_eks_token(cluster_name, region).await?;
+                cache_token(cluster_name, &token).await?;
+                return Ok(token.to_string());
+            }
         }
     }
 }
