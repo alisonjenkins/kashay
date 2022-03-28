@@ -7,9 +7,9 @@ pub struct CliArgs {
     #[clap(short, long)]
     pub cluster_name: String,
 
-    /// Skip the cache and always get a new token
-    #[clap(short, long)]
-    pub skip_cache: bool,
+    // /// Skip the cache and always get a new token
+    // #[clap(short, long)]
+    // pub skip_cache: bool,
 
     /// Name of the AWS region that the cluster is in
     #[clap(short, long, default_value = "eu-west-2")]

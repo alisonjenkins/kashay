@@ -23,46 +23,46 @@ pub struct K8sTokenStatus {
     pub token: String,
 }
 
-async fn get_cached_token(cluster_name: &str, region: &str) -> Result<String> {
-    let service = "kashay";
-    let username = cluster_name;
-    let entry = keyring::Entry::new(&service, &username);
+// async fn get_cached_token(cluster_name: &str, region: &str) -> Result<String> {
+//     let service = "kashay";
+//     let username = cluster_name;
+//     let entry = keyring::Entry::new(&service, &username);
+//
+//     let token_json = match entry.get_password() {
+//         Ok(token_json) => token_json,
+//         Err(e) => {
+//             return Err(anyhow::anyhow!("Error getting cached token: {}", e));
+//         }
+//     };
+//
+//     // Use serde to deserialize the JSON
+//     match serde_json::from_str::<K8sToken>(&token_json)
+//         .context("Failed to parse JSON encoded cached token")
+//     {
+//         Ok(token) => {
+//             let expiration = token.status.expiration_timestamp;
+//             let expiration_time = chrono::DateTime::parse_from_rfc3339(&expiration)?;
+//             let now = chrono::Utc::now();
+//             if now < expiration_time {
+//                 return Ok(token_json);
+//             } else {
+//                 let token_json = create_eks_token(cluster_name, region).await?;
+//                 cache_token(cluster_name, &token_json).await?;
+//                 return Ok(token_json);
+//             }
+//         }
+//         Err(e) => Err(anyhow::anyhow!("Error deserializing token: {}", e)),
+//     }
+// }
 
-    let token_json = match entry.get_password() {
-        Ok(token_json) => token_json,
-        Err(e) => {
-            return Err(anyhow::anyhow!("Error getting cached token: {}", e));
-        }
-    };
-
-    // Use serde to deserialize the JSON
-    match serde_json::from_str::<K8sToken>(&token_json)
-        .context("Failed to parse JSON encoded cached token")
-    {
-        Ok(token) => {
-            let expiration = token.status.expiration_timestamp;
-            let expiration_time = chrono::DateTime::parse_from_rfc3339(&expiration)?;
-            let now = chrono::Utc::now();
-            if now < expiration_time {
-                return Ok(token_json);
-            } else {
-                let token_json = create_eks_token(cluster_name, region).await?;
-                cache_token(cluster_name, &token_json).await?;
-                return Ok(token_json);
-            }
-        }
-        Err(e) => Err(anyhow::anyhow!("Error deserializing token: {}", e)),
-    }
-}
-
-async fn cache_token(cluster_name: &str, k8s_token: &str) -> Result<()> {
-    let service = "kashay";
-    let username = cluster_name;
-    let entry = keyring::Entry::new(&service, &username);
-
-    entry.set_password(k8s_token)?;
-    Ok(())
-}
+// async fn cache_token(cluster_name: &str, k8s_token: &str) -> Result<()> {
+//     let service = "kashay";
+//     let username = cluster_name;
+//     let entry = keyring::Entry::new(&service, &username);
+//
+//     entry.set_password(k8s_token)?;
+//     Ok(())
+// }
 
 async fn create_eks_token(cluster_name: &str, region: &str) -> Result<String> {
     // Convert region to AWS region
@@ -130,19 +130,19 @@ async fn create_eks_token(cluster_name: &str, region: &str) -> Result<String> {
     Ok(token)
 }
 
-pub async fn get_eks_token(cluster_name: &str, region: &str, skip_cache: &bool) -> Result<String> {
-    if skip_cache.to_owned() {
+pub async fn get_eks_token(cluster_name: &str, region: &str) -> Result<String> {
+    // if skip_cache.to_owned() {
         let token = create_eks_token(cluster_name, region).await?;
-        cache_token(cluster_name, &token).await?;
+        // cache_token(cluster_name, &token).await?;
         Ok(token)
-    } else {
-        match get_cached_token(cluster_name, region).await {
-            Ok(cached_token) => Ok(cached_token),
-            Err(_) => {
-                let token = create_eks_token(cluster_name, region).await?;
-                cache_token(cluster_name, &token).await?;
-                return Ok(token.to_string());
-            }
-        }
-    }
+    // } else {
+    //     match get_cached_token(cluster_name, region).await {
+    //         Ok(cached_token) => Ok(cached_token),
+    //         Err(_) => {
+    //             let token = create_eks_token(cluster_name, region).await?;
+    //             cache_token(cluster_name, &token).await?;
+    //             return Ok(token.to_string());
+    //         }
+    //     }
+    // }
 }
