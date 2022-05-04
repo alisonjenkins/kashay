@@ -1046,7 +1046,7 @@ dependencies = [
  "aws-config",
  "aws-sig-auth 0.10.1",
  "aws-smithy-http 0.40.2",
- "aws-types 0.10.1",
+ "aws-types 0.11.0",
  "base64",
  "chrono",
  "clap",
