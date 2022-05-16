@@ -147,7 +147,7 @@ checksum = "d74bff9a790eceb16a7825b11c4d9526fe6d3649349ba04beb5cb4770b7822b4"
 dependencies = [
  "aws-endpoint",
  "aws-http",
- "aws-sig-auth",
+ "aws-sig-auth 0.11.0",
  "aws-smithy-async 0.41.0",
  "aws-smithy-client 0.41.0",
  "aws-smithy-http 0.41.0",
@@ -169,7 +169,7 @@ checksum = "e879f3619e0b444218ab76d28364d57b81820ad792fd58088ab675237e4d7b5f"
 dependencies = [
  "aws-endpoint",
  "aws-http",
- "aws-sig-auth",
+ "aws-sig-auth 0.11.0",
  "aws-smithy-async 0.41.0",
  "aws-smithy-client 0.41.0",
  "aws-smithy-http 0.41.0",
@@ -189,11 +189,24 @@ version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b44c7698294a89fabbadb538560ad34b6fdd26e926dee3c5e710928c3093fcf0"
 dependencies = [
- "aws-sigv4",
+ "aws-sigv4 0.11.0",
  "aws-smithy-http 0.41.0",
  "aws-types 0.11.0",
  "http",
  "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "aws-sig-auth"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27079eb4062be105e44ab4638ade63cf6448c2df5cb093d885faab8082fd5c9d"
+dependencies = [
+ "aws-sigv4 0.12.0",
+ "aws-smithy-http 0.42.0",
+ "aws-types 0.12.0",
+ "http",
  "tracing",
 ]
 
@@ -204,6 +217,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fe0aee7539298b8447e1a60d2d6de329fb1619f116c5f488e0b3aa136d49696"
 dependencies = [
  "aws-smithy-http 0.41.0",
+ "form_urlencoded",
+ "hex",
+ "http",
+ "once_cell",
+ "percent-encoding",
+ "regex",
+ "ring",
+ "time 0.3.9",
+ "tracing",
+]
+
+[[package]]
+name = "aws-sigv4"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0be4a7223c244f3c57426087204cf66e04d1e73adb62571090613889cf6ee57"
+dependencies = [
+ "aws-smithy-http 0.42.0",
  "form_urlencoded",
  "hex",
  "http",
@@ -1012,7 +1043,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "aws-config",
- "aws-sig-auth",
+ "aws-sig-auth 0.12.0",
  "aws-smithy-http 0.41.0",
  "aws-types 0.12.0",
  "base64",
