@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0"
 aws-config = "0.14"
-aws-sig-auth = "0.14"
+aws-sig-auth = "0.15"
 aws-smithy-http = "0.44.0"
 aws-types = "0.14"
 base64 = "0.13.0"
