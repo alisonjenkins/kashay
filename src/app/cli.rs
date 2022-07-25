@@ -15,7 +15,3 @@ pub struct CliArgs {
     #[clap(short, long, default_value = "eu-west-2")]
     pub region: String,
 }
-
-pub fn parse_args() -> CliArgs {
-    CliArgs::parse()
-}
