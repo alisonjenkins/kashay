@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-aws-config = "^0.15"
+aws-config = "^0.48"
 aws-sig-auth = "^0.48"
 aws-smithy-http = "^0.45"
 aws-types = "^0.48"
