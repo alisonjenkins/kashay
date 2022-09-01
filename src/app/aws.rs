@@ -26,7 +26,7 @@ pub struct K8sTokenStatus {
 async fn get_cached_token(cluster_name: &str, region: &str) -> Result<String> {
     let service = "kashay";
     let username = cluster_name;
-    let entry = keyring::Entry::new(&service, &username);
+    let entry = keyring::Entry::new(service, username);
 
     let token_json = match entry.get_password() {
         Ok(token_json) => token_json,
@@ -44,11 +44,11 @@ async fn get_cached_token(cluster_name: &str, region: &str) -> Result<String> {
             let expiration_time = chrono::DateTime::parse_from_rfc3339(&expiration)?;
             let now = chrono::Utc::now();
             if now < expiration_time {
-                return Ok(token_json);
+                Ok(token_json)
             } else {
                 let token_json = create_eks_token(cluster_name, region).await?;
                 cache_token(cluster_name, &token_json).await?;
-                return Ok(token_json);
+                Ok(token_json)
             }
         }
         Err(e) => Err(anyhow::anyhow!("Error deserializing token: {}", e)),
@@ -58,7 +58,7 @@ async fn get_cached_token(cluster_name: &str, region: &str) -> Result<String> {
 async fn cache_token(cluster_name: &str, k8s_token: &str) -> Result<()> {
     let service = "kashay";
     let username = cluster_name;
-    let entry = keyring::Entry::new(&service, &username);
+    let entry = keyring::Entry::new(service, username);
 
     entry.set_password(k8s_token)?;
     Ok(())
@@ -120,8 +120,8 @@ async fn create_eks_token(cluster_name: &str, region: &str) -> Result<String> {
         api_version: "client.authentication.k8s.io/v1".to_owned(),
         spec: None,
         status: K8sTokenStatus {
-            expiration_timestamp: request_ts.to_owned(),
-            token: uri.to_string().to_owned(),
+            expiration_timestamp: request_ts,
+            token: uri,
         },
     };
 
@@ -141,7 +141,7 @@ pub async fn get_eks_token(cluster_name: &str, region: &str, skip_cache: &bool) 
             Err(_) => {
                 let token = create_eks_token(cluster_name, region).await?;
                 cache_token(cluster_name, &token).await?;
-                return Ok(token.to_string());
+                Ok(token.to_string())
             }
         }
     }
