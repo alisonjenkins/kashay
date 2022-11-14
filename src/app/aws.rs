@@ -159,9 +159,10 @@ async fn create_eks_token(cluster_name: &str, role_arn: &Option<String>) -> Resu
         &mut request,
     );
 
-    let uri = request.uri().to_string();
-    let uri = base64::encode(&uri);
-    let uri = "k8s-aws-v1.".to_owned() + &uri;
+    let uri = format!(
+        "k8s-aws-v1.{}",
+        base64::encode_config(request.uri().to_string(), base64::URL_SAFE_NO_PAD)
+    );
     let request_ts = request_ts.to_rfc3339();
 
     // Generate output JSON
