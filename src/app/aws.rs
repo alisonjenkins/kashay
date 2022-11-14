@@ -4,15 +4,16 @@ use aws_smithy_http::body::SdkBody;
 use aws_types::region::{Region, SigningRegion};
 use aws_types::{credentials::ProvideCredentials, SigningService};
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::collections::HashMap;
+use std::time::{Duration, SystemTime};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct K8sToken {
     pub kind: String,
     #[serde(rename = "apiVersion")]
     pub api_version: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub spec: Option<()>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    pub spec: HashMap<String, ()>,
     pub status: K8sTokenStatus,
 }
 
@@ -23,7 +24,7 @@ pub struct K8sTokenStatus {
     pub token: String,
 }
 
-async fn get_cached_token(cluster_name: &str, region: &str) -> Result<String> {
+async fn get_cached_token(cluster_name: &str, role_arn: &Option<String>) -> Result<String> {
     let service = "kashay";
     let username = cluster_name;
     let entry = keyring::Entry::new(service, username);
@@ -46,7 +47,7 @@ async fn get_cached_token(cluster_name: &str, region: &str) -> Result<String> {
             if now < expiration_time {
                 Ok(token_json)
             } else {
-                let token_json = create_eks_token(cluster_name, region).await?;
+                let token_json = create_eks_token(cluster_name, role_arn).await?;
                 cache_token(cluster_name, &token_json).await?;
                 Ok(token_json)
             }
@@ -64,24 +65,74 @@ async fn cache_token(cluster_name: &str, k8s_token: &str) -> Result<()> {
     Ok(())
 }
 
-async fn create_eks_token(cluster_name: &str, region: &str) -> Result<String> {
+async fn create_eks_token(cluster_name: &str, role_arn: &Option<String>) -> Result<String> {
     // Convert region to AWS region
-    let region = region.to_owned();
-    let region = Region::new(region);
+    let region = Region::new("eu-west-2");
 
     // Get credentials
-    let config = aws_config::load_from_env().await;
-    let credentials = config
-        .credentials_provider()
-        .unwrap()
-        .provide_credentials()
-        .await?;
+    let credentials = if role_arn.is_some() {
+        let shared_config = aws_config::load_from_env().await;
+        let sts_config = aws_sdk_sts::config::Builder::from(&shared_config)
+            .retry_config(aws_config::retry::RetryConfig::standard())
+            .build();
+        let sts_client = aws_sdk_sts::Client::from_conf(sts_config);
+        let assumed_role = sts_client
+            .assume_role()
+            .role_arn(role_arn.as_ref().unwrap())
+            .role_session_name("kashay")
+            .send()
+            .await?;
+        let assumed_credentials = aws_sdk_iam::Credentials::new(
+            assumed_role
+                .credentials
+                .as_ref()
+                .unwrap()
+                .access_key_id
+                .as_ref()
+                .unwrap(),
+            assumed_role
+                .credentials
+                .as_ref()
+                .unwrap()
+                .secret_access_key
+                .as_ref()
+                .unwrap(),
+            assumed_role
+                .credentials
+                .as_ref()
+                .expect("Unable to get session token for assumed role")
+                .session_token
+                .clone(),
+            Some(
+                SystemTime::try_from(
+                    assumed_role
+                        .credentials
+                        .as_ref()
+                        .expect("Unable to get the expiration for the assumed role credentials")
+                        .expiration()
+                        .unwrap()
+                        .to_owned(),
+                )
+                .unwrap(),
+            ),
+            "meh",
+        );
+
+        assumed_credentials
+    } else {
+        let config = aws_config::load_from_env().await;
+        config
+            .credentials_provider()
+            .unwrap()
+            .provide_credentials()
+            .await?
+    };
 
     // Setup signer
     let signer = signer::SigV4Signer::new();
     let mut operation_config = OperationSigningConfig::default_config();
     operation_config.signature_type = HttpSignatureType::HttpRequestQueryParams;
-    operation_config.expires_in = Some(Duration::from_secs(15 * 60));
+    operation_config.expires_in = Some(Duration::from_secs(60));
 
     let request_ts = chrono::Utc::now();
     let request_config = RequestConfig {
@@ -94,8 +145,7 @@ async fn create_eks_token(cluster_name: &str, region: &str) -> Result<String> {
     // Create the request
     let mut request = http::Request::builder()
         .uri(format!(
-            "https://sts.{}.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15",
-            &region
+            "https://sts.eu-west-2.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15"
         ))
         .header("x-k8s-aws-id", cluster_name)
         .body(SdkBody::empty())
@@ -117,8 +167,8 @@ async fn create_eks_token(cluster_name: &str, region: &str) -> Result<String> {
     // Generate output JSON
     let token = K8sToken {
         kind: "ExecCredential".to_owned(),
-        api_version: "client.authentication.k8s.io/v1".to_owned(),
-        spec: None,
+        api_version: "client.authentication.k8s.io/v1beta1".to_owned(),
+        spec: HashMap::new(),
         status: K8sTokenStatus {
             expiration_timestamp: request_ts,
             token: uri,
@@ -130,16 +180,20 @@ async fn create_eks_token(cluster_name: &str, region: &str) -> Result<String> {
     Ok(token)
 }
 
-pub async fn get_eks_token(cluster_name: &str, region: &str, skip_cache: &bool) -> Result<String> {
+pub async fn get_eks_token(
+    cluster_name: &str,
+    skip_cache: &bool,
+    role_arn: &Option<String>,
+) -> Result<String> {
     if skip_cache.to_owned() {
-        let token = create_eks_token(cluster_name, region).await?;
-        cache_token(cluster_name, &token).await?;
+        let token = create_eks_token(cluster_name, role_arn).await?;
+        // cache_token(cluster_name, &token).await?;
         Ok(token)
     } else {
-        match get_cached_token(cluster_name, region).await {
+        match get_cached_token(cluster_name, role_arn).await {
             Ok(cached_token) => Ok(cached_token),
             Err(_) => {
-                let token = create_eks_token(cluster_name, region).await?;
+                let token = create_eks_token(cluster_name, role_arn).await?;
                 cache_token(cluster_name, &token).await?;
                 Ok(token.to_string())
             }
