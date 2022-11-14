@@ -103,18 +103,15 @@ async fn create_eks_token(cluster_name: &str, role_arn: &Option<String>) -> Resu
                 .expect("Unable to get session token for assumed role")
                 .session_token
                 .clone(),
-            Some(
-                SystemTime::try_from(
-                    assumed_role
-                        .credentials
-                        .as_ref()
-                        .expect("Unable to get the expiration for the assumed role credentials")
-                        .expiration()
-                        .unwrap()
-                        .to_owned(),
-                )
-                .unwrap(),
-            ),
+            Some(SystemTime::try_from(
+                assumed_role
+                    .credentials
+                    .as_ref()
+                    .expect("Unable to get the expiration for the assumed role credentials")
+                    .expiration()
+                    .unwrap()
+                    .to_owned(),
+            )?),
             "meh",
         );
 
@@ -148,8 +145,7 @@ async fn create_eks_token(cluster_name: &str, role_arn: &Option<String>) -> Resu
             "https://sts.eu-west-2.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15"
         ))
         .header("x-k8s-aws-id", cluster_name)
-        .body(SdkBody::empty())
-        .expect("valid request");
+        .body(SdkBody::empty())?;
 
     // Sign the request
     let _signature = signer.sign(
@@ -167,8 +163,8 @@ async fn create_eks_token(cluster_name: &str, role_arn: &Option<String>) -> Resu
 
     // Generate output JSON
     let token = K8sToken {
-        kind: "ExecCredential".to_owned(),
-        api_version: "client.authentication.k8s.io/v1beta1".to_owned(),
+        kind: "ExecCredential".to_string(),
+        api_version: "client.authentication.k8s.io/v1beta1".to_string(),
         spec: HashMap::new(),
         status: K8sTokenStatus {
             expiration_timestamp: request_ts,
@@ -176,27 +172,13 @@ async fn create_eks_token(cluster_name: &str, role_arn: &Option<String>) -> Resu
         },
     };
 
-    let token = serde_json::to_string(&token).context("Failed to serialize token")?;
-
-    Ok(token)
+    serde_json::to_string(&token).context("Failed to serialize token")
 }
 
-pub async fn get_eks_token(
-    cluster_name: &str,
-    skip_cache: &bool,
-    role_arn: &Option<String>,
-) -> Result<String> {
-    if skip_cache.to_owned() {
-        let token = create_eks_token(cluster_name, role_arn).await?;
-        // cache_token(cluster_name, &token).await?;
-        Ok(token)
-    } else {
-        match get_cached_token(cluster_name, role_arn).await {
-            Ok(cached_token) => Ok(cached_token),
-            Err(_) => {
-                let token = create_eks_token(cluster_name, role_arn).await?;
-                cache_token(cluster_name, &token).await?;
-                Ok(token.to_string())
+pub async fn get_eks_token(cluster_name: &str, role_arn: &Option<String>) -> Result<String> {
+    create_eks_token(cluster_name, role_arn).await
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
