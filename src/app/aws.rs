@@ -196,7 +196,53 @@ pub async fn get_eks_token(
                 let token = create_eks_token(cluster_name, role_arn).await?;
                 cache_token(cluster_name, &token).await?;
                 Ok(token.to_string())
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test_log::test(tokio::test)]
+    async fn test_get_eks_token() -> Result<()> {
+        let reqwest_client = reqwest::Client::new();
+        let cluster_name = "syn-scout-k8s-playground";
+
+        for _ in 0..9 {
+            let result = get_eks_token(cluster_name, &None).await;
+
+            if result.as_ref().is_err() {
+                println!("Failed to generate token: {:?}", result);
             }
+
+            println!("Successfully generated token: {:?}", result);
+
+            // extract the url to call from the token
+            let parsed_json: K8sToken = serde_json::from_str(&result.unwrap())?;
+
+            let token = parsed_json.status.token;
+            let url = base64::decode(token.replace("k8s-aws-v1.", ""))?;
+            let url = std::str::from_utf8(&url)?;
+            println!("Decoded to url: {:?}", url);
+
+            let resp = reqwest_client
+                .get(url)
+                .header("x-k8s-aws-id", cluster_name)
+                .send()
+                .await?;
+
+            let status = resp.status();
+            let body = resp.text().await?;
+
+            if status != 200 {
+                println!(
+                    "Request failed with http: {} and response body: {}",
+                    status, &body
+                );
+            }
+
+            println!(
+                "Request succeeded with http: {} and response body: {}",
+                status, &body
+            );
         }
+        Ok(())
     }
 }
