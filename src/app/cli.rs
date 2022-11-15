@@ -7,6 +7,10 @@ pub struct CliArgs {
     #[clap(short, long)]
     pub cluster_name: String,
 
+    /// ARN of a role to assume to be able to authenticate with the Kubernetes cluster.
+    #[clap(short = 'R', long, default_value = None)]
+    pub role_arn: Option<String>,
+
     /// Skip the cache and always get a new token
     #[clap(short, long)]
     pub skip_cache: bool,
