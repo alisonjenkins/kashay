@@ -12,7 +12,6 @@ pub struct K8sToken {
     pub kind: String,
     #[serde(rename = "apiVersion")]
     pub api_version: String,
-    // #[serde(skip_serializing_if = "Option::is_none")]
     pub spec: HashMap<String, ()>,
     pub status: K8sTokenStatus,
 }
@@ -65,67 +64,68 @@ pub struct K8sTokenStatus {
 //     Ok(())
 // }
 
-async fn create_eks_token(cluster_name: &str, role_arn: &Option<String>) -> Result<String> {
-    // Convert region to AWS region
-    let region = Region::new("eu-west-2");
-
-    // Get credentials
-    let credentials = if role_arn.is_some() {
-        let shared_config = aws_config::load_from_env().await;
-        let sts_config = aws_sdk_sts::config::Builder::from(&shared_config)
-            .retry_config(aws_config::retry::RetryConfig::standard())
-            .build();
-        let sts_client = aws_sdk_sts::Client::from_conf(sts_config);
-        let assumed_role = sts_client
-            .assume_role()
-            .role_arn(role_arn.as_ref().unwrap())
-            .role_session_name("kashay")
-            .send()
-            .await?;
-        let assumed_credentials = aws_sdk_iam::Credentials::new(
-            assumed_role
-                .credentials
-                .as_ref()
-                .unwrap()
-                .access_key_id
-                .as_ref()
-                .unwrap(),
-            assumed_role
-                .credentials
-                .as_ref()
-                .unwrap()
-                .secret_access_key
-                .as_ref()
-                .unwrap(),
-            assumed_role
-                .credentials
-                .as_ref()
-                .expect("Unable to get session token for assumed role")
-                .session_token
-                .clone(),
-            Some(SystemTime::try_from(
-                assumed_role
-                    .credentials
-                    .as_ref()
-                    .expect("Unable to get the expiration for the assumed role credentials")
-                    .expiration()
-                    .unwrap()
-                    .to_owned(),
-            )?),
-            "meh",
-        );
-
-        assumed_credentials
+// Assumes the specified role arn and returns the credentials
+async fn assume_role(role_arn: &str, session_name: &Option<String>) ->  Result<aws_sdk_iam::Credentials> {
+    let shared_config = aws_config::load_from_env().await;
+    let session_name = if let Some(session_name) = session_name {
+        session_name.clone()
     } else {
-        let config = aws_config::load_from_env().await;
-        config
-            .credentials_provider()
-            .unwrap()
-            .provide_credentials()
-            .await?
+        "kashay".to_string()
     };
 
-    // Setup signer
+    let sts_config = aws_sdk_sts::config::Builder::from(&shared_config)
+        .retry_config(aws_config::retry::RetryConfig::standard())
+        .build();
+
+    let sts_client = aws_sdk_sts::Client::from_conf(sts_config);
+
+    let assumed_role = sts_client
+        .assume_role()
+        .role_arn(role_arn)
+        .role_session_name(session_name)
+        .send()
+        .await?;
+
+    let assumed_role_credentials = assumed_role.credentials.as_ref().ok_or_else(|| anyhow::anyhow!("Unable to get credentials for assumed role"))?;
+
+    let assumed_credentials = aws_sdk_iam::Credentials::new(
+        assumed_role_credentials
+            .access_key_id
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Unable to get access key id for assumed role"))?,
+        assumed_role_credentials
+            .secret_access_key
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Unable to get secret access key for assumed role"))?,
+        assumed_role_credentials
+            .session_token
+            .clone(),
+        Some(SystemTime::try_from(
+            assumed_role_credentials
+                .expiration()
+                .ok_or_else(|| anyhow::anyhow!("Unable to get expiration for assumed role"))?
+                .to_owned(),
+        )?),
+        "meh",
+    );
+
+    Ok(assumed_credentials)
+}
+
+pub async fn get_eks_token(cluster_name: &str, role_arn: &Option<String>, session_name: &Option<String>) -> Result<String> {
+    let region = Region::new("eu-west-2");
+
+    let credentials = match role_arn {
+        Some(role_arn) => assume_role(role_arn, session_name).await?,
+        None => {
+            let config = aws_config::load_from_env().await;
+            config
+                .credentials_provider().ok_or_else(|| anyhow::anyhow!("Unable to get credentials provider"))?
+                .provide_credentials()
+                .await?
+        }
+    };
+
     let signer = signer::SigV4Signer::new();
     let mut operation_config = OperationSigningConfig::default_config();
     operation_config.signature_type = HttpSignatureType::HttpRequestQueryParams;
@@ -139,7 +139,6 @@ async fn create_eks_token(cluster_name: &str, role_arn: &Option<String>) -> Resu
         payload_override: None,
     };
 
-    // Create the request
     let mut request = http::Request::builder()
         .uri(format!(
             "https://sts.eu-west-2.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15"
@@ -147,7 +146,6 @@ async fn create_eks_token(cluster_name: &str, role_arn: &Option<String>) -> Resu
         .header("x-k8s-aws-id", cluster_name)
         .body(SdkBody::empty())?;
 
-    // Sign the request
     let _signature = signer.sign(
         &operation_config,
         &request_config,
@@ -161,7 +159,6 @@ async fn create_eks_token(cluster_name: &str, role_arn: &Option<String>) -> Resu
     );
     let request_ts = request_ts.to_rfc3339();
 
-    // Generate output JSON
     let token = K8sToken {
         kind: "ExecCredential".to_string(),
         api_version: "client.authentication.k8s.io/v1beta1".to_string(),
@@ -175,10 +172,6 @@ async fn create_eks_token(cluster_name: &str, role_arn: &Option<String>) -> Resu
     serde_json::to_string(&token).context("Failed to serialize token")
 }
 
-pub async fn get_eks_token(cluster_name: &str, role_arn: &Option<String>) -> Result<String> {
-    create_eks_token(cluster_name, role_arn).await
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -189,16 +182,9 @@ mod test {
         let cluster_name = "syn-scout-k8s-playground";
 
         for _ in 0..9 {
-            let result = get_eks_token(cluster_name, &None).await;
+            let result = get_eks_token(cluster_name, &None, &None).await?;
 
-            if result.as_ref().is_err() {
-                println!("Failed to generate token: {:?}", result);
-            }
-
-            println!("Successfully generated token: {:?}", result);
-
-            // extract the url to call from the token
-            let parsed_json: K8sToken = serde_json::from_str(&result.unwrap())?;
+            let parsed_json: K8sToken = serde_json::from_str(&result)?;
 
             let token = parsed_json.status.token;
             let url = base64::decode(token.replace("k8s-aws-v1.", ""))?;
