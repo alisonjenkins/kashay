@@ -11,6 +11,10 @@ pub struct CliArgs {
     #[clap(short = 'R', long, default_value = None)]
     pub role_arn: Option<String>,
 
+    /// Session name to use when assuming the role
+    #[clap(short = 's', long, default_value = None)]
+    pub session_name: Option<String>,
+
     /// Skip the cache and always get a new token
     #[clap(short, long)]
     pub skip_cache: bool,
