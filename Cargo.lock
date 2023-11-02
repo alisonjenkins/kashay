@@ -323,7 +323,7 @@ checksum = "22e0325edba56532ff06ba077fcfe1086ab76f78da8189bcc9bd16bb946b0953"
 dependencies = [
  "aws-endpoint",
  "aws-http",
- "aws-sig-auth",
+ "aws-sig-auth 0.51.0",
  "aws-smithy-async 0.51.0",
  "aws-smithy-client 0.51.0",
  "aws-smithy-http 0.51.0",
@@ -346,7 +346,7 @@ checksum = "86dcb1cb71aa8763b327542ead410424515cff0cde5b753eedd2917e09c63734"
 dependencies = [
  "aws-endpoint",
  "aws-http",
- "aws-sig-auth",
+ "aws-sig-auth 0.51.0",
  "aws-smithy-async 0.51.0",
  "aws-smithy-client 0.51.0",
  "aws-smithy-http 0.51.0",
@@ -368,7 +368,7 @@ checksum = "fdfcf584297c666f6b472d5368a78de3bc714b6e0a53d7fbf76c3e347c292ab1"
 dependencies = [
  "aws-endpoint",
  "aws-http",
- "aws-sig-auth",
+ "aws-sig-auth 0.51.0",
  "aws-smithy-async 0.51.0",
  "aws-smithy-client 0.51.0",
  "aws-smithy-http 0.51.0",
@@ -388,9 +388,24 @@ version = "0.51.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12cbe7b2be9e185c1fbce27fc9c41c66b195b32d89aa099f98768d9544221308"
 dependencies = [
- "aws-sigv4",
+ "aws-sigv4 0.51.1",
  "aws-smithy-http 0.51.0",
  "aws-types 0.51.0",
+ "http",
+ "tracing",
+]
+
+[[package]]
+name = "aws-sig-auth"
+version = "0.56.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54bdd56437a3f6bd3f5d16d5ba0532e90e6c9371b8274cd97a55a2f2c3e44efb"
+dependencies = [
+ "aws-credential-types",
+ "aws-sigv4 0.56.1",
+ "aws-smithy-async 0.56.1",
+ "aws-smithy-http 0.56.1",
+ "aws-types 0.56.1",
  "http",
  "tracing",
 ]
@@ -409,6 +424,25 @@ dependencies = [
  "percent-encoding",
  "regex",
  "ring",
+ "time",
+ "tracing",
+]
+
+[[package]]
+name = "aws-sigv4"
+version = "0.56.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7b28f4910bb956b7ab320b62e98096402354eca976c587d1eeccd523d9bac03"
+dependencies = [
+ "aws-smithy-http 0.56.1",
+ "form_urlencoded",
+ "hex",
+ "hmac",
+ "http",
+ "once_cell",
+ "percent-encoding",
+ "regex",
+ "sha2",
  "time",
  "tracing",
 ]
@@ -1487,7 +1521,7 @@ dependencies = [
  "aws-config",
  "aws-sdk-iam",
  "aws-sdk-sts",
- "aws-sig-auth",
+ "aws-sig-auth 0.56.1",
  "aws-smithy-http 0.57.1",
  "aws-types 0.56.1",
  "base64",
