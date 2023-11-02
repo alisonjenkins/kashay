@@ -357,25 +357,27 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-iam"
-version = "0.21.0"
+version = "0.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22e0325edba56532ff06ba077fcfe1086ab76f78da8189bcc9bd16bb946b0953"
+checksum = "1c7f86b1dc40594c079e25ac379345038a33c3cf5a2979b3e0535822daad6310"
 dependencies = [
- "aws-endpoint",
- "aws-http 0.51.0",
- "aws-sig-auth 0.51.0",
- "aws-smithy-async 0.51.0",
- "aws-smithy-client 0.51.0",
- "aws-smithy-http 0.51.0",
- "aws-smithy-http-tower 0.51.0",
- "aws-smithy-query 0.51.0",
- "aws-smithy-types 0.51.0",
- "aws-smithy-xml 0.51.0",
- "aws-types 0.51.0",
- "bytes",
+ "aws-credential-types",
+ "aws-http 0.56.1",
+ "aws-runtime",
+ "aws-smithy-async 0.56.1",
+ "aws-smithy-client 0.56.1",
+ "aws-smithy-http 0.56.1",
+ "aws-smithy-json 0.56.1",
+ "aws-smithy-query 0.56.1",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api 0.56.1",
+ "aws-smithy-types 0.56.1",
+ "aws-smithy-xml 0.56.1",
+ "aws-types 0.56.1",
  "http",
+ "regex",
  "tokio-stream",
- "tower",
+ "tracing",
 ]
 
 [[package]]
@@ -610,8 +612,6 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "pin-utils",
- "tokio",
- "tokio-util",
  "tracing",
 ]
 
