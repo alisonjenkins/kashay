@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0"
 aws-config = "^0.51"
-aws-sdk-iam = "0.34"
+aws-sdk-iam = "0.35"
 aws-sdk-sts = "0.34"
 aws-sig-auth = "^0.56.1"
 aws-smithy-http = "^0.57.1"
