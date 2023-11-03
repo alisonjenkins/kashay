@@ -463,18 +463,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sig-auth"
-version = "0.56.1"
+version = "0.57.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54bdd56437a3f6bd3f5d16d5ba0532e90e6c9371b8274cd97a55a2f2c3e44efb"
-dependencies = [
- "aws-credential-types",
- "aws-sigv4 0.56.1",
- "aws-smithy-async 0.56.1",
- "aws-smithy-http 0.56.1",
- "aws-types 0.56.1",
- "http",
- "tracing",
-]
+checksum = "aede9dbd70afb3cf9e36e178487bf2c3e461a6c19c2f77f80097dbd6adb4dc67"
 
 [[package]]
 name = "aws-sigv4"
@@ -1672,7 +1663,7 @@ dependencies = [
  "aws-config",
  "aws-sdk-iam",
  "aws-sdk-sts 0.34.0",
- "aws-sig-auth 0.56.1",
+ "aws-sig-auth 0.57.1",
  "aws-smithy-http 0.57.1",
  "aws-types 0.56.1",
  "base64",
