@@ -414,9 +414,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sig-auth"
-version = "0.57.1"
+version = "0.60.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aede9dbd70afb3cf9e36e178487bf2c3e461a6c19c2f77f80097dbd6adb4dc67"
+checksum = "0478d21f39a9ca0daac4b08a894372246cfbca6fe8ca13d68acd8f2a73f1e621"
 
 [[package]]
 name = "aws-sigv4"
