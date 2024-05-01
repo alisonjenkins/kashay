@@ -7,7 +7,7 @@ edition = "2021"
 [lib]
 
 [dependencies]
-anyhow = "1.0"
+anyhow = "1.0.82"
 aws-config = "^0.101.0"
 aws-sdk-iam = "0.39"
 aws-sdk-sts = "0.39"
