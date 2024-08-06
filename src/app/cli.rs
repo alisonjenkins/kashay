@@ -1,3 +1,4 @@
+use crate::app::aws::GetEKSTokenInput;
 use clap::Parser;
 
 #[derive(Parser)]
@@ -17,4 +18,15 @@ pub struct CliArgs {
     /// Session name to use when assuming the role
     #[clap(short = 's', long, default_value = None)]
     pub session_name: Option<String>,
+}
+
+impl Into<GetEKSTokenInput> for CliArgs {
+    fn into(self) -> GetEKSTokenInput {
+        GetEKSTokenInput {
+            aws_profile: self.aws_profile,
+            aws_region: self.aws_region,
+            cluster_name: self.cluster_name,
+            session_name: self.session_name,
+        }
+    }
 }

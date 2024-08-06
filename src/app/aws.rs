@@ -5,8 +5,6 @@ use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::cli::CliArgs;
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct K8sToken {
     pub kind: String,
@@ -23,17 +21,31 @@ pub struct K8sTokenStatus {
     pub token: String,
 }
 
-pub async fn get_eks_token(args: &CliArgs) -> Result<String> {
-    let session_name = if let Some(session_name) = &args.session_name {
+pub struct GetEKSTokenInput {
+    /// The AWS region to use for the request
+    pub aws_region: String,
+
+    /// The AWS profile to use for the request
+    pub aws_profile: String,
+
+    /// The name of the EKS cluster
+    pub cluster_name: String,
+
+    /// The session name to use when assuming the role to authenticate the K8s requests
+    pub session_name: Option<String>,
+}
+
+pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String> {
+    let session_name = if let Some(session_name) = &input.session_name {
         session_name
     } else {
         &"kashay".to_string()
     };
 
-    let region = aws_config::Region::new(args.aws_region.clone());
+    let region = aws_config::Region::new(input.aws_region.clone());
     let shared_config = aws_config::defaults(BehaviorVersion::v2024_03_28())
         .region(region)
-        .profile_name(&args.aws_profile)
+        .profile_name(&input.aws_profile)
         .load()
         .await;
 
@@ -48,7 +60,7 @@ pub async fn get_eks_token(args: &CliArgs) -> Result<String> {
     let request_ts = chrono::Utc::now();
     let signing_params = aws_sigv4::sign::v4::SigningParams::builder()
         .identity(&identity)
-        .region(&args.aws_region)
+        .region(&input.aws_region)
         .name(&session_name)
         .time(request_ts.into())
         .settings(signing_settings)
@@ -59,7 +71,7 @@ pub async fn get_eks_token(args: &CliArgs) -> Result<String> {
 
     let mut request = http::Request::builder()
         .uri(uri)
-        .header("x-k8s-aws-id", &args.cluster_name)
+        .header("x-k8s-aws-id", &input.cluster_name)
         .body(())?;
 
     let signable_request = aws_sigv4::http_request::SignableRequest::new(
