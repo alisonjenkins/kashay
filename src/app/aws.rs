@@ -1,11 +1,11 @@
 use anyhow::{Context, Result};
-use aws_sig_auth::signer::{self, HttpSignatureType, OperationSigningConfig, RequestConfig};
-use aws_smithy_http::body::SdkBody;
-use aws_types::region::{Region, SigningRegion};
-use aws_types::{credentials::ProvideCredentials, SigningService};
+use aws_config::BehaviorVersion;
+use aws_sdk_sts::config::ProvideCredentials;
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::time::{Duration, SystemTime};
+
+use super::cli::CliArgs;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct K8sToken {
@@ -23,139 +23,63 @@ pub struct K8sTokenStatus {
     pub token: String,
 }
 
-// async fn get_cached_token(cluster_name: &str, role_arn: &Option<String>) -> Result<String> {
-//     let service = "kashay";
-//     let username = cluster_name;
-//     let entry = keyring::Entry::new(service, username);
-//
-//     let token_json = match entry.get_password() {
-//         Ok(token_json) => token_json,
-//         Err(e) => {
-//             return Err(anyhow::anyhow!("Error getting cached token: {}", e));
-//         }
-//     };
-//
-//     // Use serde to deserialize the JSON
-//     match serde_json::from_str::<K8sToken>(&token_json)
-//         .context("Failed to parse JSON encoded cached token")
-//     {
-//         Ok(token) => {
-//             let expiration = token.status.expiration_timestamp;
-//             let expiration_time = chrono::DateTime::parse_from_rfc3339(&expiration)?;
-//             let now = chrono::Utc::now();
-//             if now < expiration_time {
-//                 Ok(token_json)
-//             } else {
-//                 let token_json = create_eks_token(cluster_name, role_arn).await?;
-//                 cache_token(cluster_name, &token_json).await?;
-//                 Ok(token_json)
-//             }
-//         }
-//         Err(e) => Err(anyhow::anyhow!("Error deserializing token: {}", e)),
-//     }
-// }
-//
-// async fn cache_token(cluster_name: &str, k8s_token: &str) -> Result<()> {
-//     let service = "kashay";
-//     let username = cluster_name;
-//     let entry = keyring::Entry::new(service, username);
-//
-//     entry.set_password(k8s_token)?;
-//     Ok(())
-// }
-
-// Assumes the specified role arn and returns the credentials
-async fn assume_role(role_arn: &str, session_name: &Option<String>) ->  Result<aws_sdk_iam::Credentials> {
-    let shared_config = aws_config::load_from_env().await;
-    let session_name = if let Some(session_name) = session_name {
-        session_name.clone()
+pub async fn get_eks_token(args: &CliArgs) -> Result<String> {
+    let session_name = if let Some(session_name) = &args.session_name {
+        session_name
     } else {
-        "kashay".to_string()
+        &"kashay".to_string()
     };
 
-    let sts_config = aws_sdk_sts::config::Builder::from(&shared_config)
-        .retry_config(aws_config::retry::RetryConfig::standard())
-        .build();
+    let region = aws_config::Region::new(args.aws_region.clone());
+    let shared_config = aws_config::defaults(BehaviorVersion::v2024_03_28())
+        .region(region)
+        .profile_name(&args.aws_profile)
+        .load()
+        .await;
 
-    let sts_client = aws_sdk_sts::Client::from_conf(sts_config);
+    let identity = shared_config
+        .credentials_provider()
+        .ok_or_else(|| anyhow::anyhow!("Unable to get credentials provider"))?
+        .provide_credentials()
+        .await?
+        .into();
 
-    let assumed_role = sts_client
-        .assume_role()
-        .role_arn(role_arn)
-        .role_session_name(session_name)
-        .send()
-        .await?;
-
-    let assumed_role_credentials = assumed_role.credentials.as_ref().ok_or_else(|| anyhow::anyhow!("Unable to get credentials for assumed role"))?;
-
-    let assumed_credentials = aws_sdk_iam::Credentials::new(
-        assumed_role_credentials
-            .access_key_id
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Unable to get access key id for assumed role"))?,
-        assumed_role_credentials
-            .secret_access_key
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Unable to get secret access key for assumed role"))?,
-        assumed_role_credentials
-            .session_token
-            .clone(),
-        Some(SystemTime::try_from(
-            assumed_role_credentials
-                .expiration()
-                .ok_or_else(|| anyhow::anyhow!("Unable to get expiration for assumed role"))?
-                .to_owned(),
-        )?),
-        "meh",
-    );
-
-    Ok(assumed_credentials)
-}
-
-pub async fn get_eks_token(cluster_name: &str, role_arn: &Option<String>, session_name: &Option<String>) -> Result<String> {
-    let region = Region::new("eu-west-2");
-
-    let credentials = match role_arn {
-        Some(role_arn) => assume_role(role_arn, session_name).await?,
-        None => {
-            let config = aws_config::load_from_env().await;
-            config
-                .credentials_provider().ok_or_else(|| anyhow::anyhow!("Unable to get credentials provider"))?
-                .provide_credentials()
-                .await?
-        }
-    };
-
-    let signer = signer::SigV4Signer::new();
-    let mut operation_config = OperationSigningConfig::default_config();
-    operation_config.signature_type = HttpSignatureType::HttpRequestQueryParams;
-    operation_config.expires_in = Some(Duration::from_secs(60));
-
+    let signing_settings = aws_sigv4::http_request::SigningSettings::default();
     let request_ts = chrono::Utc::now();
-    let request_config = RequestConfig {
-        request_ts: request_ts.into(),
-        region: &SigningRegion::from(region.clone()),
-        service: &SigningService::from_static("sts"),
-        payload_override: None,
-    };
+    let signing_params = aws_sigv4::sign::v4::SigningParams::builder()
+        .identity(&identity)
+        .region(&args.aws_region)
+        .name(&session_name)
+        .time(request_ts.into())
+        .settings(signing_settings)
+        .build()?
+        .into();
+
+    let uri = "https://sts.eu-west-2.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15";
 
     let mut request = http::Request::builder()
-        .uri(format!(
-            "https://sts.eu-west-2.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15"
-        ))
-        .header("x-k8s-aws-id", cluster_name)
-        .body(SdkBody::empty())?;
+        .uri(uri)
+        .header("x-k8s-aws-id", &args.cluster_name)
+        .body(())?;
 
-    let _signature = signer.sign(
-        &operation_config,
-        &request_config,
-        &credentials,
-        &mut request,
-    );
+    let signable_request = aws_sigv4::http_request::SignableRequest::new(
+        "GET",
+        uri,
+        request
+            .headers()
+            .iter()
+            .map(|(headername, headervalue)| (headername.as_str(), headervalue.to_str().unwrap())),
+        aws_sigv4::http_request::SignableBody::Bytes(&[]),
+    )?;
+
+    let (signing_instructions, _signature) =
+        aws_sigv4::http_request::sign(signable_request, &signing_params)?.into_parts();
+
+    signing_instructions.apply_to_request_http1x(&mut request);
 
     let uri = format!(
         "k8s-aws-v1.{}",
-        base64::encode_config(request.uri().to_string(), base64::URL_SAFE_NO_PAD)
+        URL_SAFE_NO_PAD.encode(request.uri().to_string())
     );
     let request_ts = request_ts.to_rfc3339();
 
@@ -178,17 +102,24 @@ mod test {
 
     #[test_log::test(tokio::test)]
     async fn test_get_eks_token() -> Result<()> {
+        let args = CliArgs {
+            aws_profile: "kashay-test".to_string(),
+            aws_region: "eu-west-2".to_string(),
+            cluster_name: "test-cluster".to_string(),
+            session_name: Some("kashay-test-session".to_string()),
+        };
         let reqwest_client = reqwest::Client::new();
         let cluster_name = "syn-scout-k8s-playground";
 
         for _ in 0..9 {
-            let result = get_eks_token(cluster_name, &None, &None).await?;
+            let result = get_eks_token(&args).await?;
 
             let parsed_json: K8sToken = serde_json::from_str(&result)?;
 
             let token = parsed_json.status.token;
-            let url = base64::decode(token.replace("k8s-aws-v1.", ""))?;
-            let url = std::str::from_utf8(&url)?;
+            println!("Token: {:?}", token);
+            let url = URL_SAFE_NO_PAD.decode(token.replace("k8s-aws-v1.", ""))?;
+            let url = std::str::from_utf8(url.as_slice())?;
             println!("Decoded to url: {:?}", url);
 
             let resp = reqwest_client
