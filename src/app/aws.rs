@@ -1,9 +1,9 @@
-use anyhow::{Context, Result};
 use aws_config::BehaviorVersion;
 use aws_sdk_sts::config::ProvideCredentials;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use thiserror::Error;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct K8sToken {
@@ -35,7 +35,43 @@ pub struct GetEKSTokenInput {
     pub session_name: Option<String>,
 }
 
-pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String> {
+#[derive(Error, Debug)]
+pub enum GetEKSTokenError {
+    #[error(
+        "Credentials provider was None when trying to get credentials from the AWS shared config"
+    )]
+    CredentialsProviderNone,
+
+    #[error("Unable to get credentials from the AWS credentials provider: {source}")]
+    CredentialsProviderError {
+        source: aws_credential_types::provider::error::CredentialsError,
+    },
+
+    #[error(
+        "Failed to build the signing params for signing the authenticating with EKS: {source}"
+    )]
+    FailedToBuildSigningParams {
+        source: aws_sigv4::sign::v4::signing_params::BuildError,
+    },
+
+    #[error("Failed to build HTTP request for authenticating to EKS: {source}")]
+    FailedToBuildHttpRequest { source: http::Error },
+
+    #[error("Failed to create signable request to sign EKS authentication request: {source}")]
+    FailedToCreateSignableRequest {
+        source: aws_sigv4::http_request::SigningError,
+    },
+
+    #[error("Failed to sign HTTP request for authenticating against EKS cluster: {source}")]
+    FailedToSignHttpRequest {
+        source: aws_sigv4::http_request::SigningError,
+    },
+
+    #[error("Failed to serialize EKS authentication token: {source}")]
+    FailedToSerializeToken { source: serde_json::Error },
+}
+
+pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String, GetEKSTokenError> {
     let session_name = if let Some(session_name) = &input.session_name {
         session_name
     } else {
@@ -51,9 +87,10 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String> {
 
     let identity = shared_config
         .credentials_provider()
-        .ok_or_else(|| anyhow::anyhow!("Unable to get credentials provider"))?
+        .ok_or_else(|| GetEKSTokenError::CredentialsProviderNone)?
         .provide_credentials()
-        .await?
+        .await
+        .map_err(|source| GetEKSTokenError::CredentialsProviderError { source })?
         .into();
 
     let signing_settings = aws_sigv4::http_request::SigningSettings::default();
@@ -64,7 +101,8 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String> {
         .name(&session_name)
         .time(request_ts.into())
         .settings(signing_settings)
-        .build()?
+        .build()
+        .map_err(|source| GetEKSTokenError::FailedToBuildSigningParams { source })?
         .into();
 
     let uri = "https://sts.eu-west-2.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15";
@@ -72,7 +110,8 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String> {
     let mut request = http::Request::builder()
         .uri(uri)
         .header("x-k8s-aws-id", &input.cluster_name)
-        .body(())?;
+        .body(())
+        .map_err(|source| GetEKSTokenError::FailedToBuildHttpRequest { source })?;
 
     let signable_request = aws_sigv4::http_request::SignableRequest::new(
         "GET",
@@ -82,10 +121,13 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String> {
             .iter()
             .map(|(headername, headervalue)| (headername.as_str(), headervalue.to_str().unwrap())),
         aws_sigv4::http_request::SignableBody::Bytes(&[]),
-    )?;
+    )
+    .map_err(|source| GetEKSTokenError::FailedToCreateSignableRequest { source })?;
 
     let (signing_instructions, _signature) =
-        aws_sigv4::http_request::sign(signable_request, &signing_params)?.into_parts();
+        aws_sigv4::http_request::sign(signable_request, &signing_params)
+            .map_err(|source| GetEKSTokenError::FailedToSignHttpRequest { source })?
+            .into_parts();
 
     signing_instructions.apply_to_request_http1x(&mut request);
 
@@ -105,7 +147,8 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String> {
         },
     };
 
-    serde_json::to_string(&token).context("Failed to serialize token")
+    serde_json::to_string(&token)
+        .map_err(|source| GetEKSTokenError::FailedToSerializeToken { source })
 }
 
 #[cfg(test)]
