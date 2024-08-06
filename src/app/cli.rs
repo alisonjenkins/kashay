@@ -20,13 +20,13 @@ pub struct CliArgs {
     pub session_name: Option<String>,
 }
 
-impl Into<GetEKSTokenInput> for CliArgs {
-    fn into(self) -> GetEKSTokenInput {
+impl From<CliArgs> for GetEKSTokenInput {
+    fn from(val: CliArgs) -> Self {
         GetEKSTokenInput {
-            aws_profile: self.aws_profile,
-            aws_region: self.aws_region,
-            cluster_name: self.cluster_name,
-            session_name: self.session_name,
+            aws_profile: val.aws_profile,
+            aws_region: val.aws_region,
+            cluster_name: val.cluster_name,
+            session_name: val.session_name,
         }
     }
 }

@@ -93,12 +93,14 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String, GetEKSTok
         .map_err(|source| GetEKSTokenError::CredentialsProviderError { source })?
         .into();
 
-    let signing_settings = aws_sigv4::http_request::SigningSettings::default();
+    let mut signing_settings = aws_sigv4::http_request::SigningSettings::default();
+    signing_settings.signature_location = aws_sigv4::http_request::SignatureLocation::QueryParams;
+    signing_settings.expires_in = Some(std::time::Duration::from_secs(60));
     let request_ts = chrono::Utc::now();
     let signing_params = aws_sigv4::sign::v4::SigningParams::builder()
         .identity(&identity)
         .region(&input.aws_region)
-        .name(&session_name)
+        .name(session_name)
         .time(request_ts.into())
         .settings(signing_settings)
         .build()
@@ -135,14 +137,13 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String, GetEKSTok
         "k8s-aws-v1.{}",
         URL_SAFE_NO_PAD.encode(request.uri().to_string())
     );
-    let request_ts = request_ts.to_rfc3339();
 
     let token = K8sToken {
         kind: "ExecCredential".to_string(),
         api_version: "client.authentication.k8s.io/v1beta1".to_string(),
         spec: HashMap::new(),
         status: K8sTokenStatus {
-            expiration_timestamp: request_ts,
+            expiration_timestamp: request_ts.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             token: uri,
         },
     };
@@ -154,6 +155,8 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String, GetEKSTok
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::app::cli::CliArgs;
+    use anyhow::Result;
 
     #[test_log::test(tokio::test)]
     async fn test_get_eks_token() -> Result<()> {
@@ -165,9 +168,10 @@ mod test {
         };
         let reqwest_client = reqwest::Client::new();
         let cluster_name = "syn-scout-k8s-playground";
+        let get_eks_token_input = args.into();
 
         for _ in 0..9 {
-            let result = get_eks_token(&args).await?;
+            let result = get_eks_token(&get_eks_token_input).await?;
 
             let parsed_json: K8sToken = serde_json::from_str(&result)?;
 
