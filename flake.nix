@@ -49,7 +49,7 @@
     {
       packages = {
         default = eks-creds;
-        kashay = eks-creds;
+        eks-creds = eks-creds;
       };
 
       devShells.default = pkgs.mkShell {
