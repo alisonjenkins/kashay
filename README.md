@@ -8,3 +8,7 @@ second to get credentials.
 
 eks-auth on the other hand typically takes about 200ms because it is written in Rust and does not have
 to load a Python interpreter and then interpret code to be able to get the credentials.
+
+## License
+
+This software is licensed under the [MIT license](LICENSE).

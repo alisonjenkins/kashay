@@ -4,7 +4,7 @@
   inputs = {
     crate2nix.url = "github:nix-community/crate2nix/0.14.0";
     flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs-stable.url = "github:NixOS/nixpkgs/23.11";
+    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-24.11";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
@@ -49,7 +49,7 @@
     {
       packages = {
         default = eks-creds;
-        kashay = eks-creds;
+        eks-creds = eks-creds;
       };
 
       devShells.default = pkgs.mkShell {
