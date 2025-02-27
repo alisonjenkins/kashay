@@ -1,5 +1,5 @@
 use anyhow::Result;
-use kashay::app::application::run;
+use eks_creds::app::application::run;
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;

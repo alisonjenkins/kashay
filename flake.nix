@@ -1,5 +1,5 @@
 {
-  description = "Build Kashay";
+  description = "Build eks-creds";
 
   inputs = {
     crate2nix.url = "github:nix-community/crate2nix/0.14.0";
@@ -9,13 +9,14 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = {
-    flake-utils,
-    nixpkgs,
-    nixpkgs-stable,
-    ...
-  } @ inputs:
-    flake-utils.lib.eachDefaultSystem (system: let
+  outputs =
+    { flake-utils
+    , nixpkgs
+    , nixpkgs-stable
+    , ...
+    } @ inputs:
+    flake-utils.lib.eachDefaultSystem (system:
+    let
       stable-packages = final: _prev: {
         stable = import nixpkgs-stable {
           system = final.system;
@@ -35,7 +36,7 @@
         defaultCrateOverrides = with pkgs;
           defaultCrateOverrides
           // {
-            kashay = attrs: {
+            eks-creds = attrs: {
               buildInputs = lib.optionals stdenv.isDarwin [
                 darwin.apple_sdk.frameworks.Security
               ];
@@ -43,11 +44,12 @@
           };
       };
 
-      kashay = generatedBuild.rootCrate.build;
-    in {
+      eks-creds = generatedBuild.rootCrate.build;
+    in
+    {
       packages = {
-        default = kashay;
-        kashay = kashay;
+        default = eks-creds;
+        kashay = eks-creds;
       };
 
       devShells.default = pkgs.mkShell {

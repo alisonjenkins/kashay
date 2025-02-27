@@ -75,7 +75,7 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String, GetEKSTok
     let session_name = if let Some(session_name) = &input.session_name {
         session_name
     } else {
-        &"kashay".to_string()
+        &"eks-creds".to_string()
     };
 
     let region = aws_config::Region::new(input.aws_region.clone());
@@ -161,10 +161,10 @@ mod test {
     #[test_log::test(tokio::test)]
     async fn test_get_eks_token() -> Result<()> {
         let args = CliArgs {
-            aws_profile: "kashay-test".to_string(),
+            aws_profile: "eks-creds-test".to_string(),
             aws_region: "eu-west-2".to_string(),
             cluster_name: "test-cluster".to_string(),
-            session_name: Some("kashay-test-session".to_string()),
+            session_name: Some("eks-creds-test-session".to_string()),
         };
         let reqwest_client = reqwest::Client::new();
         let cluster_name = "syn-scout-k8s-playground";

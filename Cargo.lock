@@ -633,6 +633,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 
 [[package]]
+name = "eks-creds"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aws-config",
+ "aws-credential-types",
+ "aws-sdk-sts",
+ "aws-sigv4",
+ "base64 0.22.1",
+ "chrono",
+ "clap",
+ "env_logger",
+ "http 1.2.0",
+ "mimalloc",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "test-log",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "encoding_rs"
 version = "0.8.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1236,29 +1259,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1868808506b929d7b0cfa8f75951347aa71bb21144b7791bae35d9bccfcfe37a"
 dependencies = [
  "wasm-bindgen",
-]
-
-[[package]]
-name = "kashay"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "aws-config",
- "aws-credential-types",
- "aws-sdk-sts",
- "aws-sigv4",
- "base64 0.22.1",
- "chrono",
- "clap",
- "env_logger",
- "http 1.2.0",
- "mimalloc",
- "reqwest",
- "serde",
- "serde_json",
- "test-log",
- "thiserror",
- "tokio",
 ]
 
 [[package]]

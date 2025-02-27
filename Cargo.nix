@@ -33,7 +33,7 @@ rec {
   #
 
   rootCrate = rec {
-    packageId = "kashay";
+    packageId = "eks-creds";
 
     # Use this attribute to refer to the derivation building your root crate package.
     # You can override the features with rootCrate.build.override { features = [ "default" "feature1" ... ]; }.
@@ -49,10 +49,10 @@ rec {
   # You can override the features with
   # workspaceMembers."${crateName}".build.override { features = [ "default" "feature1" ... ]; }.
   workspaceMembers = {
-    "kashay" = rec {
-      packageId = "kashay";
+    "eks-creds" = rec {
+      packageId = "eks-creds";
       build = internal.buildRustCrateWithFeatures {
-        packageId = "kashay";
+        packageId = "eks-creds";
       };
 
       # Debug support which might change between releases.
@@ -4168,14 +4168,14 @@ rec {
         ];
 
       };
-      "kashay" = rec {
-        crateName = "kashay";
+      "eks-creds" = rec {
+        crateName = "eks-creds";
         version = "0.1.0";
         edition = "2021";
         crateBin = [
           {
-            name = "kashay";
-            path = "src/bin/kashay.rs";
+            name = "eks-creds";
+            path = "src/bin/eks-creds.rs";
             requiredFeatures = [ ];
           }
         ];
