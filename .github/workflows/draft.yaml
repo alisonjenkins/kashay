@@ -31,12 +31,12 @@ jobs:
           - os: ubuntu-latest
             target: powerpc64le-unknown-linux-gnu
             gcc: gcc-powerpc64le-linux-gnu
-          - os: ubuntu-latest
-            target: sparc64-unknown-linux-gnu
-            gcc: gcc-sparc64-linux-gnu
-          - os: ubuntu-latest
-            target: s390x-unknown-linux-gnu
-            gcc: gcc-s390x-linux-gnu
+          # - os: ubuntu-latest
+          #   target: sparc64-unknown-linux-gnu
+          #   gcc: gcc-sparc64-linux-gnu
+          # - os: ubuntu-latest
+          #   target: s390x-unknown-linux-gnu
+          #   gcc: gcc-s390x-linux-gnu
           - os: macos-latest
             target: x86_64-apple-darwin
           - os: macos-latest
@@ -141,37 +141,37 @@ jobs:
           name: eks-creds-${{ matrix.target }}.zip
           path: eks-creds-${{ matrix.target }}.zip
 
-  build-snap:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            arch: amd64
-          - os: ubuntu-24.04-arm
-            arch: arm64
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup LXD
-        uses: canonical/setup-lxd@v0.1.2
-
-      - name: Setup snapcraft
-        run: sudo snap install --classic snapcraft
-
-      - name: Build snap
-        run: snapcraft --verbose
-
-      - name: Rename snap
-        run: mv eks-creds*.snap eks-creds-${{ matrix.arch }}.snap
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: eks-creds-${{ matrix.arch }}.snap
-          path: eks-creds-${{ matrix.arch }}.snap
+  # build-snap:
+  #   strategy:
+  #     matrix:
+  #       include:
+  #         - os: ubuntu-latest
+  #           arch: amd64
+  #         - os: ubuntu-24.04-arm
+  #           arch: arm64
+  #   runs-on: ${{ matrix.os }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #
+  #     - name: Setup LXD
+  #       uses: canonical/setup-lxd@v0.1.2
+  #
+  #     - name: Setup snapcraft
+  #       run: sudo snap install --classic snapcraft
+  #
+  #     - name: Build snap
+  #       run: snapcraft --verbose
+  #
+  #     - name: Rename snap
+  #       run: mv eks-creds*.snap eks-creds-${{ matrix.arch }}.snap
+  #
+  #     - name: Upload artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: eks-creds-${{ matrix.arch }}.snap
+  #         path: eks-creds-${{ matrix.arch }}.snap
 
   draft:
     if: startsWith(github.ref, 'refs/tags/')
