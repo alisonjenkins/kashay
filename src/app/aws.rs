@@ -75,7 +75,7 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String, GetEKSTok
     let session_name = if let Some(session_name) = &input.session_name {
         session_name
     } else {
-        &"eks-creds".to_string()
+        &"sts".to_string()
     };
 
     let region = aws_config::Region::new(input.aws_region.clone());
