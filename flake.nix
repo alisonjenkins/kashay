@@ -57,6 +57,7 @@
           [
             pkgs.cargo-nextest
             pkgs.crate2nix
+            pkgs.gcc
             pkgs.just
             pkgs.rust-analyzer
             pkgs.rust-bin.stable.latest.default
