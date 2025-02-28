@@ -2,6 +2,7 @@
 set -euo pipefail
 
 export ARTIFACT_NAME="eks-creds-$1"
+mkdir -p "$ARTIFACT_NAME"
 
 # Build for the target
 cargo build --release --locked --target "$1"
