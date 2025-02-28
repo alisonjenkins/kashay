@@ -5,11 +5,12 @@ use clap::Parser;
 #[clap(author, version, about, long_about = None)]
 pub struct CliArgs {
     /// AWS profile to use for authentication
-    pub aws_profile: String,
+    #[clap(short, long, default_value = None)]
+    pub profile: Option<String>,
 
     /// Name of the AWS region that the cluster is in
     #[clap(short, long, default_value = "eu-west-2")]
-    pub aws_region: String,
+    pub region: String,
 
     /// Name of the EKS Kubernetes cluster to get a token for
     #[clap(short, long)]
@@ -23,8 +24,8 @@ pub struct CliArgs {
 impl From<CliArgs> for GetEKSTokenInput {
     fn from(val: CliArgs) -> Self {
         GetEKSTokenInput {
-            aws_profile: val.aws_profile,
-            aws_region: val.aws_region,
+            profile: val.profile,
+            region: val.region,
             cluster_name: val.cluster_name,
             session_name: val.session_name,
         }
