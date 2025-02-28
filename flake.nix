@@ -55,6 +55,7 @@
       devShells.default = pkgs.mkShell {
         packages =
           [
+            pkgs.awscli2
             pkgs.cargo-nextest
             pkgs.crate2nix
             pkgs.gcc
