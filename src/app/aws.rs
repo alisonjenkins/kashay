@@ -23,10 +23,10 @@ pub struct K8sTokenStatus {
 
 pub struct GetEKSTokenInput {
     /// The AWS region to use for the request
-    pub aws_region: String,
+    pub region: String,
 
     /// The AWS profile to use for the request
-    pub aws_profile: String,
+    pub profile: Option<String>,
 
     /// The name of the EKS cluster
     pub cluster_name: String,
@@ -37,6 +37,9 @@ pub struct GetEKSTokenInput {
 
 #[derive(Error, Debug)]
 pub enum GetEKSTokenError {
+    #[error("AWS Profile is None. Please either specify the AWS profile via the --profile switch or set the AWS_PROFILE environment variable.")]
+    ProfileNone,
+
     #[error(
         "Credentials provider was None when trying to get credentials from the AWS shared config"
     )]
@@ -78,10 +81,16 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String, GetEKSTok
         &"sts".to_string()
     };
 
-    let region = aws_config::Region::new(input.aws_region.clone());
+    let profile = if let Some(profile) = &input.profile {
+        profile.to_string()
+    } else {
+        std::env::var("AWS_PROFILE").map_err(|_| GetEKSTokenError::ProfileNone)?
+    };
+
+    let region = aws_config::Region::new(input.region.clone());
     let shared_config = aws_config::defaults(BehaviorVersion::v2024_03_28())
         .region(region)
-        .profile_name(&input.aws_profile)
+        .profile_name(&profile)
         .load()
         .await;
 
@@ -99,7 +108,7 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String, GetEKSTok
     let request_ts = chrono::Utc::now();
     let signing_params = aws_sigv4::sign::v4::SigningParams::builder()
         .identity(&identity)
-        .region(&input.aws_region)
+        .region(&input.region)
         .name(session_name)
         .time(request_ts.into())
         .settings(signing_settings)
@@ -109,7 +118,7 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String, GetEKSTok
 
     let uri = format!(
         "https://sts.{}.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15",
-        &input.aws_region
+        &input.region
     );
 
     let mut request = http::Request::builder()
@@ -164,8 +173,8 @@ mod test {
     #[test_log::test(tokio::test)]
     async fn test_get_eks_token() -> Result<()> {
         let args = CliArgs {
-            aws_profile: "eks-creds-test".to_string(),
-            aws_region: "eu-west-2".to_string(),
+            profile: Some("eks-creds-test".to_string()),
+            region: "eu-west-2".to_string(),
             cluster_name: "test-cluster".to_string(),
             session_name: Some("eks-creds-test-session".to_string()),
         };
