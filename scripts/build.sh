@@ -7,7 +7,7 @@ export ARTIFACT_NAME="eks-creds-$1"
 cargo build --release --locked --target "$1"
 
 # Create the artifact
-cp "target/$1/release/eks-creds" "$ARTIFACT_NAME"
+cp "target/release/eks-creds" "$ARTIFACT_NAME"
 cp README.md LICENSE "$ARTIFACT_NAME"
 
 # Zip the artifact
