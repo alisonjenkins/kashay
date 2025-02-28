@@ -107,10 +107,13 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String, GetEKSTok
         .map_err(|source| GetEKSTokenError::FailedToBuildSigningParams { source })?
         .into();
 
-    let uri = "https://sts.eu-west-2.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15";
+    let uri = format!(
+        "https://sts.{}.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15",
+        &input.aws_region
+    );
 
     let mut request = http::Request::builder()
-        .uri(uri)
+        .uri(&uri)
         .header("x-k8s-aws-id", &input.cluster_name)
         .body(())
         .map_err(|source| GetEKSTokenError::FailedToBuildHttpRequest { source })?;
