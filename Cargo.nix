@@ -296,9 +296,9 @@ rec {
       };
       "anyhow" = rec {
         crateName = "anyhow";
-        version = "1.0.96";
+        version = "1.0.97";
         edition = "2018";
-        sha256 = "1x0b2lk76lfgj069jadmn9zi1wscwz45nwfjgnvbdnc99qc4v5kb";
+        sha256 = "0kvspbiwncmmkdgrwjrimsmbmhzxc641p5ql99l2rjq6smmdbznw";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -2213,6 +2213,97 @@ rec {
           "default" = [ "use_std" ];
           "serde" = [ "dep:serde" ];
         };
+      };
+      "eks-creds" = rec {
+        crateName = "eks-creds";
+        version = "0.1.0";
+        edition = "2021";
+        crateBin = [
+          {
+            name = "eks-creds";
+            path = "src/bin/eks-creds.rs";
+            requiredFeatures = [ ];
+          }
+        ];
+        src = lib.cleanSourceWith { filter = sourceFilter;  src = ./.; };
+        libName = "eks_creds";
+        dependencies = [
+          {
+            name = "anyhow";
+            packageId = "anyhow";
+          }
+          {
+            name = "aws-config";
+            packageId = "aws-config";
+          }
+          {
+            name = "aws-credential-types";
+            packageId = "aws-credential-types";
+          }
+          {
+            name = "aws-sdk-sts";
+            packageId = "aws-sdk-sts";
+          }
+          {
+            name = "aws-sigv4";
+            packageId = "aws-sigv4";
+            features = [ "sign-http" ];
+          }
+          {
+            name = "base64";
+            packageId = "base64 0.22.1";
+          }
+          {
+            name = "chrono";
+            packageId = "chrono";
+          }
+          {
+            name = "clap";
+            packageId = "clap";
+            features = [ "color" "derive" "env" "unicode" "suggestions" "wrap_help" ];
+          }
+          {
+            name = "http";
+            packageId = "http 1.2.0";
+          }
+          {
+            name = "mimalloc";
+            packageId = "mimalloc";
+          }
+          {
+            name = "serde";
+            packageId = "serde";
+            features = [ "derive" ];
+          }
+          {
+            name = "serde_json";
+            packageId = "serde_json";
+          }
+          {
+            name = "thiserror";
+            packageId = "thiserror";
+          }
+          {
+            name = "tokio";
+            packageId = "tokio";
+            features = [ "io-std" "macros" "net" "rt" "test-util" ];
+          }
+        ];
+        devDependencies = [
+          {
+            name = "env_logger";
+            packageId = "env_logger";
+          }
+          {
+            name = "reqwest";
+            packageId = "reqwest";
+          }
+          {
+            name = "test-log";
+            packageId = "test-log";
+          }
+        ];
+
       };
       "encoding_rs" = rec {
         crateName = "encoding_rs";
@@ -4164,96 +4255,6 @@ rec {
           {
             name = "wasm-bindgen";
             packageId = "wasm-bindgen";
-          }
-        ];
-
-      };
-      "eks-creds" = rec {
-        crateName = "eks-creds";
-        version = "0.1.0";
-        edition = "2021";
-        crateBin = [
-          {
-            name = "eks-creds";
-            path = "src/bin/eks-creds.rs";
-            requiredFeatures = [ ];
-          }
-        ];
-        src = lib.cleanSourceWith { filter = sourceFilter;  src = ./.; };
-        dependencies = [
-          {
-            name = "anyhow";
-            packageId = "anyhow";
-          }
-          {
-            name = "aws-config";
-            packageId = "aws-config";
-          }
-          {
-            name = "aws-credential-types";
-            packageId = "aws-credential-types";
-          }
-          {
-            name = "aws-sdk-sts";
-            packageId = "aws-sdk-sts";
-          }
-          {
-            name = "aws-sigv4";
-            packageId = "aws-sigv4";
-            features = [ "sign-http" ];
-          }
-          {
-            name = "base64";
-            packageId = "base64 0.22.1";
-          }
-          {
-            name = "chrono";
-            packageId = "chrono";
-          }
-          {
-            name = "clap";
-            packageId = "clap";
-            features = [ "color" "derive" "env" "unicode" "suggestions" "wrap_help" ];
-          }
-          {
-            name = "http";
-            packageId = "http 1.2.0";
-          }
-          {
-            name = "mimalloc";
-            packageId = "mimalloc";
-          }
-          {
-            name = "serde";
-            packageId = "serde";
-            features = [ "derive" ];
-          }
-          {
-            name = "serde_json";
-            packageId = "serde_json";
-          }
-          {
-            name = "thiserror";
-            packageId = "thiserror";
-          }
-          {
-            name = "tokio";
-            packageId = "tokio";
-            features = [ "io-std" "macros" "net" "rt" "test-util" ];
-          }
-        ];
-        devDependencies = [
-          {
-            name = "env_logger";
-            packageId = "env_logger";
-          }
-          {
-            name = "reqwest";
-            packageId = "reqwest";
-          }
-          {
-            name = "test-log";
-            packageId = "test-log";
           }
         ];
 
@@ -6657,9 +6658,9 @@ rec {
       };
       "thiserror" = rec {
         crateName = "thiserror";
-        version = "2.0.11";
+        version = "2.0.12";
         edition = "2021";
-        sha256 = "1z0649rpa8c2smzx129bz4qvxmdihj30r2km6vfpcv9yny2g4lnl";
+        sha256 = "024791nsc0np63g2pq30cjf9acj38z3jwx9apvvi8qsqmqnqlysn";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -6676,9 +6677,9 @@ rec {
       };
       "thiserror-impl" = rec {
         crateName = "thiserror-impl";
-        version = "2.0.11";
+        version = "2.0.12";
         edition = "2021";
-        sha256 = "1hkkn7p2y4cxbffcrprybkj0qy1rl1r6waxmxqvr764axaxc3br6";
+        sha256 = "07bsn7shydaidvyyrm7jz29vp78vrxr9cr9044rfmn078lmz8z3z";
         procMacro = true;
         libName = "thiserror_impl";
         authors = [
