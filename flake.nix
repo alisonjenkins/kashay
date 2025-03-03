@@ -58,6 +58,7 @@
             pkgs.awscli2
             pkgs.cargo-nextest
             pkgs.crate2nix
+            pkgs.cargo-flamegraph
             pkgs.gcc
             pkgs.hyperfine
             pkgs.just
