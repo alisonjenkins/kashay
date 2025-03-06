@@ -1,6 +1,7 @@
 use aws_config::BehaviorVersion;
 use aws_sdk_sts::config::ProvideCredentials;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use clap::Parser;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
@@ -21,17 +22,23 @@ pub struct K8sTokenStatus {
     pub token: String,
 }
 
+#[derive(Parser)]
+#[clap(author, version, about, long_about = None)]
 pub struct GetEKSTokenInput {
-    /// The AWS region to use for the request
+    /// Name of the AWS region that the cluster is in
+    #[clap(short, long, default_value = "eu-west-2")]
     pub region: String,
 
-    /// The AWS profile to use for the request
+    /// AWS profile to use for authentication
+    #[clap(short, long, default_value = None)]
     pub profile: Option<String>,
 
-    /// The name of the EKS cluster
+    /// Name of the EKS Kubernetes cluster to get a token for
+    #[clap(short, long)]
     pub cluster_name: String,
 
-    /// The session name to use when assuming the role to authenticate the K8s requests
+    /// Session name to use when assuming the role
+    #[clap(short = 's', long, default_value = None)]
     pub session_name: Option<String>,
 }
 
