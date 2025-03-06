@@ -53,15 +53,18 @@
       };
 
       devShells.default = pkgs.mkShell {
+        PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
+
         packages =
           [
             pkgs.awscli2
+            pkgs.cargo-flamegraph
             pkgs.cargo-nextest
             pkgs.crate2nix
-            pkgs.cargo-flamegraph
             pkgs.gcc
             pkgs.hyperfine
             pkgs.just
+            pkgs.pkg-config
             pkgs.rust-analyzer
             pkgs.rust-bin.stable.latest.default
           ]
