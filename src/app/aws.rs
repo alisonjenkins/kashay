@@ -174,12 +174,11 @@ pub async fn get_eks_token(input: &GetEKSTokenInput) -> Result<String, GetEKSTok
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::app::cli::CliArgs;
     use anyhow::Result;
 
     #[test_log::test(tokio::test)]
     async fn test_get_eks_token() -> Result<()> {
-        let args = CliArgs {
+        let args = GetEKSTokenInput {
             profile: Some("eks-creds-test".to_string()),
             region: "eu-west-2".to_string(),
             cluster_name: "test-cluster".to_string(),
@@ -187,7 +186,7 @@ mod test {
         };
         let reqwest_client = reqwest::Client::new();
         let cluster_name = "syn-scout-k8s-playground";
-        let get_eks_token_input = args.into();
+        let get_eks_token_input = args;
 
         for _ in 0..9 {
             let result = get_eks_token(&get_eks_token_input).await?;
